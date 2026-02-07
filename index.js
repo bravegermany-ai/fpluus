@@ -11,16 +11,27 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 const sessions = {};
 
 // ---------------- NAMEN + ALTER ----------------
-const NAMES = [
-  "Anna","Laura","Lisa","Mia","Lena","Sophie","Nina","Emily",
-  "Lea","Sarah","Julia","Vanessa","Alina","Marie","Katharina"
-];
+const NAMES = ["Anna","Laura","Lisa","Mia","Lena","Sophie","Nina","Emily","Lea","Sarah","Julia","Vanessa","Alina","Marie","Katharina"];
+const randomName = () => NAMES[Math.floor(Math.random()*NAMES.length)];
+const randomAge = () => Math.floor(Math.random()*(25-18+1))+18;
 
-const randomAge = () => Math.floor(Math.random() * (25 - 18 + 1)) + 18;
-const randomName = () => NAMES[Math.floor(Math.random() * NAMES.length)];
+// ---------------- ZAHLUNG ----------------
+const PAYMENT_LINKS = {
+  PAYPAL: "https://www.paypal.me/FplusPaypal",
+  AMAZON: "https://www.guthaben.de/amazon-gutscheine-oesterreich",
+  BITSA: "https://www.guthaben.de/bitsa-oesterreich"
+};
 
-// ---------------- LINKS (für ALLE Städte gleich) ----------------
-const GIRL_LINKS = [
+// ---------------- ALLE STÄDTE ----------------
+const STÄDTE = {
+  DE:["Berlin","Hamburg","München","Köln","Frankfurt","Stuttgart","Düsseldorf","Dortmund","Essen","Leipzig","Bremen","Dresden","Hannover","Nürnberg","Duisburg","Bochum","Wuppertal","Bielefeld","Bonn","Mannheim","Karlsruhe","Wiesbaden","Münster","Augsburg","Gelsenkirchen","Mönchengladbach","Braunschweig","Chemnitz","Kiel","Magdeburg","Freiburg","Krefeld","Lübeck","Oberhausen","Erfurt","Mainz","Rostock","Kassel","Hagen","Hamm","Saarbrücken","Mülheim","Potsdam","Ludwigshafen","Oldenburg","Leverkusen","Osnabrück","Solingen"],
+  AT:["Wien","Graz","Salzburg","Innsbruck","Linz","Klagenfurt","Villach","Wels","Sankt Pölten","Dornbirn","Steyr","Feldkirch","Bregenz","Leonding","Krems an der Donau","Traun","Amstetten","Kapfenberg","Wolfsberg","Leoben"],
+  CH:["Zürich","Genf","Basel","Bern","Lausanne","Winterthur","St. Gallen","Lugano","Biel/Bienne","Thun","Köniz","La Chaux-de-Fonds","Schaffhausen","Fribourg","Chur","Neuchâtel","Vernier","Uster","Sion","Lancy"]
+};
+
+// ---------------- LINKS ----------------
+// Wir verteilen alle deine vorhandenen Links automatisch 3 pro Stadt
+const ALL_LINKS = [
   "https://t.me/willigedamen/4","https://t.me/willigedamen/5","https://t.me/willigedamen/6",
   "https://t.me/willigedamen/9","https://t.me/willigedamen/15","https://t.me/willigedamen/16",
   "https://t.me/willigedamen/17","https://t.me/willigedamen/18","https://t.me/willigedamen/19",
@@ -30,126 +41,116 @@ const GIRL_LINKS = [
   "https://t.me/willigedamen/29","https://t.me/willigedamen/30"
 ];
 
-// ---------------- ZAHLUNG ----------------
-const PAYMENT_LINKS = {
-  PAYPAL: "https://www.paypal.me/FplusPaypal",
-  AMAZON: "https://www.guthaben.de/amazon-gutscheine-oesterreich",
-  BITSA: "https://www.guthaben.de/bitsa-oesterreich"
-};
-
-// ---------------- STÄDTE ----------------
-const STÄDTE = {
-  DE: ["Berlin","Hamburg","München","Köln","Frankfurt"],
-  AT: ["Wien","Graz","Salzburg","Linz","Innsbruck"],
-  CH: ["Zürich","Bern","Basel","Genf","Luzern"]
-};
+// ---------------- ERZEUGT 3 GIRLS PRO STADT ----------------
+const GIRLS_PER_CITY = {};
+Object.entries(STÄDTE).forEach(([country, cities])=>{
+  cities.forEach(city=>{
+    GIRLS_PER_CITY[city] = [];
+    for(let i=0;i<3;i++){
+      const link = ALL_LINKS[Math.floor(Math.random()*ALL_LINKS.length)];
+      GIRLS_PER_CITY[city].push({
+        link,
+        name: randomName(),
+        age: randomAge()
+      });
+    }
+  });
+});
 
 // ---------------- START ----------------
-bot.start(ctx => {
+bot.start(ctx=>{
   sessions[ctx.from.id] = {};
-  ctx.reply(
-    "👋 Willkommen zu deinem F+ Bot",
-    Markup.inlineKeyboard([[Markup.button.callback("👉 Hier starten", "START")]])
+  ctx.reply("👋 Willkommen zu deinem F+ Bot",
+    Markup.inlineKeyboard([[Markup.button.callback("👉 Hier starten","START")]])
   );
 });
 
 // ---------------- LAND ----------------
-bot.action("START", async ctx => {
+bot.action("START", async ctx=>{
   await ctx.answerCbQuery();
-  await ctx.editMessageText(
-    "🌍 Wähle dein Land:",
+  await ctx.editMessageText("🌍 Wähle dein Land:",
     Markup.inlineKeyboard([
-      [Markup.button.callback("🇩🇪 Deutschland", "LAND_DE")],
-      [Markup.button.callback("🇦🇹 Österreich", "LAND_AT")],
-      [Markup.button.callback("🇨🇭 Schweiz", "LAND_CH")]
+      [Markup.button.callback("🇩🇪 Deutschland","LAND_DE")],
+      [Markup.button.callback("🇦🇹 Österreich","LAND_AT")],
+      [Markup.button.callback("🇨🇭 Schweiz","LAND_CH")]
     ])
   );
 });
 
 // ---------------- STADT ----------------
-bot.action(/LAND_(DE|AT|CH)/, async ctx => {
+bot.action(/LAND_(DE|AT|CH)/, async ctx=>{
   await ctx.answerCbQuery();
   const land = ctx.match[1];
   sessions[ctx.from.id].land = land;
-
-  const buttons = STÄDTE[land].map(s =>
-    [Markup.button.callback(s, `CITY_${s}`)]
-  );
-
-  buttons.push([Markup.button.callback("◀️ Zurück", "START")]);
-
+  const buttons = STÄDTE[land].map(city=>[Markup.button.callback(city, `CITY_${city}`)]);
+  buttons.push([Markup.button.callback("◀️ Zurück","START")]);
   await ctx.editMessageText("🏙️ Wähle deine Stadt:", Markup.inlineKeyboard(buttons));
 });
 
-// ---------------- PROFIL ANZEIGEN ----------------
-function sendRandomGirl(ctx) {
-  const session = sessions[ctx.from.id];
+// ---------------- RANDOM GIRL ANZEIGEN ----------------
+function sendRandomGirl(ctx){
+  const s = sessions[ctx.from.id];
+  const girls = GIRLS_PER_CITY[s.city];
   let index;
-
-  do {
-    index = Math.floor(Math.random() * GIRL_LINKS.length);
-  } while (index === session.lastIndex);
-
-  session.lastIndex = index;
-
-  session.girl = {
-    name: randomName(),
-    age: randomAge(),
-    link: GIRL_LINKS[index]
-  };
+  do { index = Math.floor(Math.random()*girls.length); } while(index===s.lastIndex);
+  s.lastIndex = index;
+  s.currentGirl = girls[index];
 
   return ctx.editMessageText(
-    `👩 Name: ${session.girl.name}\n🎂 Alter: ${session.girl.age}\n🔗 ${session.girl.link}`,
+    `👩 Name: ${s.currentGirl.name}\n🎂 Alter: ${s.currentGirl.age}\n🔗 ${s.currentGirl.link}`,
     Markup.inlineKeyboard([
-      [Markup.button.callback("💌 Kontakt kaufen", "BUY")],
-      [Markup.button.callback("➡️ Nächstes", "NEXT")],
-      [Markup.button.callback("◀️ Zurück", `LAND_${session.land}`)]
+      [Markup.button.callback("💌 Kontakt kaufen","BUY")],
+      [Markup.button.callback("➡️ Nächstes","NEXT")],
+      [Markup.button.callback("◀️ Zurück",`LAND_${s.land}`)]
     ])
   );
 }
 
-bot.action(/CITY_(.+)/, async ctx => {
+// ---------------- CITY ----------------
+bot.action(/CITY_(.+)/, async ctx=>{
   await ctx.answerCbQuery();
   sessions[ctx.from.id].city = ctx.match[1];
   await sendRandomGirl(ctx);
 });
 
-bot.action("NEXT", async ctx => {
+// ---------------- NEXT ----------------
+bot.action("NEXT", async ctx=>{
   await ctx.answerCbQuery();
   await sendRandomGirl(ctx);
 });
 
-// ---------------- ZAHLUNG ----------------
-bot.action("BUY", async ctx => {
+// ---------------- BUY ----------------
+bot.action("BUY", async ctx=>{
   await ctx.answerCbQuery();
   await ctx.editMessageText(
     "💳 Zahlungsmethode wählen:",
     Markup.inlineKeyboard([
-      [Markup.button.callback("PayPal", "PAY_PAYPAL")],
-      [Markup.button.callback("Amazon", "PAY_AMAZON")],
-      [Markup.button.callback("Bitsa", "PAY_BITSA")],
-      [Markup.button.callback("◀️ Zurück", "NEXT")]
+      [Markup.button.callback("PayPal","PAY_PAYPAL")],
+      [Markup.button.callback("Amazon","PAY_AMAZON")],
+      [Markup.button.callback("Bitsa","PAY_BITSA")],
+      [Markup.button.callback("◀️ Zurück","NEXT")]
     ])
   );
 });
 
-["PAY_PAYPAL","PAY_AMAZON","PAY_BITSA"].forEach(p => {
-  bot.action(p, async ctx => {
+// ---------------- ZAHLUNG ----------------
+["PAY_PAYPAL","PAY_AMAZON","PAY_BITSA"].forEach(p=>{
+  bot.action(p, async ctx=>{
     await ctx.answerCbQuery();
     const method = p.replace("PAY_","");
     const s = sessions[ctx.from.id];
 
     await ctx.editMessageText(
-      `✅ Deine Anfrage für ${s.girl.name} (${s.girl.age}) wurde registriert.\n` +
-      `Zahlungsmethode: ${method}\n` +
-      `Hier kannst du bezahlen: ${PAYMENT_LINKS[method]}\n` +
+      `✅ Deine Anfrage für ${s.currentGirl.name} (${s.currentGirl.age}) wurde registriert.\n`+
+      `Zahlungsmethode: ${method}\n`+
+      `Hier kannst du bezahlen: ${PAYMENT_LINKS[method]}\n`+
       `Kontaktiere den Admin ${ADMIN_USERNAME}`
     );
 
-    if (ADMIN_ID) {
+    if(ADMIN_ID){
       ctx.telegram.sendMessage(
         ADMIN_ID,
-        `Neue Anfrage\nStadt: ${s.city}\nName: ${s.girl.name}\nAlter: ${s.girl.age}\nZahlung: ${method}`
+        `Neue Anfrage\nLand: ${s.land}\nStadt: ${s.city}\nName: ${s.currentGirl.name}\nAlter: ${s.currentGirl.age}\nZahlungsmethode: ${method}`
       );
     }
 
@@ -157,6 +158,6 @@ bot.action("BUY", async ctx => {
   });
 });
 
-// ---------------- START ----------------
+// ---------------- LAUNCH ----------------
 bot.launch();
-console.log("🤖 Bot läuft");
+console.log("🤖 Vermittlungs-Bot läuft");
