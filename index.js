@@ -74,6 +74,7 @@ bot.action(/COUNTRY_(DE|AT|CH)/, async (ctx) => {
   sessions[ctx.from.id].land = land;
 
   const buttons = STÄDTE[land].map(stadt => [Markup.button.callback(stadt, `CITY_${stadt}`)]);
+  // Zurück Button zum Länder Menü
   buttons.push([Markup.button.callback("◀️ Zurück", "START_FLOW")]);
 
   await ctx.editMessageText("Bitte wähle deine Stadt:", Markup.inlineKeyboard(buttons));
@@ -91,7 +92,10 @@ bot.action(/CITY_(.+)/, async (ctx) => {
 
   await ctx.editMessageText(
     messageText,
-    Markup.inlineKeyboard([[Markup.button.callback("💌 Kontakt kaufen", "BUY_CONTACT")]])
+    Markup.inlineKeyboard([
+      [Markup.button.callback("💌 Kontakt kaufen", "BUY_CONTACT")],
+      [Markup.button.callback("◀️ Zurück", `COUNTRY_${sessions[ctx.from.id].land}`)]
+    ])
   );
 });
 
@@ -105,7 +109,8 @@ bot.action("BUY_CONTACT", async (ctx) => {
     Markup.inlineKeyboard([
       [Markup.button.callback("PayPal", "PAY_PAYPAL")],
       [Markup.button.callback("Amazon", "PAY_AMAZON")],
-      [Markup.button.callback("Bitsa", "PAY_BITSA")]
+      [Markup.button.callback("Bitsa", "PAY_BITSA")],
+      [Markup.button.callback("◀️ Zurück", `CITY_${sessions[ctx.from.id].city}`)]
     ])
   );
 });
