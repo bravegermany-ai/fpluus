@@ -1,118 +1,109 @@
-import os
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    CallbackQueryHandler,
-    MessageHandler,
-    ContextTypes,
-    filters
-)
+import { Telegraf, Markup } from "telegraf";
 
-# -------- CONFIG --------
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
+if (!process.env.BOT_TOKEN) throw new Error("BOT_TOKEN fehlt");
+if (!process.env.ADMIN_ID) throw new Error("ADMIN_ID fehlt");
 
-# Städte je Land
-de_städte = ["Berlin", "Hamburg", "München", "Köln", "Frankfurt","Stuttgart","Düsseldorf","Dortmund","Essen","Leipzig","Bremen","Dresden","Hannover","Nürnberg","Duisburg","Bochum","Wuppertal","Bielefeld","Bonn","Münster"]
-at_städte = ["Wien","Graz","Salzburg","Linz","Innsbruck","Klagenfurt","Villach","Wels","Sankt Pölten","Dornbirn","Steyr","Feldkirch","Bregenz","Leoben","Kapfenberg"]
-ch_städte = ["Zürich","Genf","Basel","Bern","Lausanne","Winterthur","St. Gallen","Lugano","Biel","Thun","Köniz","La Chaux-de-Fonds","Schaffhausen","Fribourg","Chur"]
+const bot = new Telegraf(process.env.BOT_TOKEN);
+const ADMIN_ID = parseInt(process.env.ADMIN_ID);
 
-# -------- /start --------
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("👉 Hier starten", callback_data="start_bot")]]
-    await update.message.reply_text(
-        "Willkommen zu deinem F+ Bot",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+// ----------------- STÄDTE -----------------
+const STÄDTE = {
+  DE: ["Berlin","Hamburg","München","Köln","Frankfurt","Stuttgart","Düsseldorf","Dortmund","Essen","Leipzig","Bremen","Dresden","Hannover","Nürnberg","Duisburg","Bochum","Wuppertal","Bielefeld","Bonn","Münster"],
+  AT: ["Wien","Graz","Salzburg","Linz","Innsbruck","Klagenfurt","Villach","Wels","Sankt Pölten","Dornbirn","Steyr","Feldkirch","Bregenz","Leoben","Kapfenberg"],
+  CH: ["Zürich","Genf","Basel","Bern","Lausanne","Winterthur","St. Gallen","Lugano","Biel","Thun","Köniz","La Chaux-de-Fonds","Schaffhausen","Fribourg","Chur"]
+};
 
-# -------- BUTTON HANDLER --------
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+// ----------------- START -----------------
+const showMainMenu = async (ctx) => {
+  await ctx.reply(
+    "👋 Willkommen zu deinem F+ Bot",
+    Markup.inlineKeyboard([[Markup.button.callback("👉 Hier starten", "START_FLOW")]])
+  );
+};
 
-    # Start → Länder
-    if query.data == "start_bot":
-        keyboard = [
-            [InlineKeyboardButton("🇩🇪 Deutschland", callback_data="country_de")],
-            [InlineKeyboardButton("🇦🇹 Österreich", callback_data="country_at")],
-            [InlineKeyboardButton("🇨🇭 Schweiz", callback_data="country_ch")]
-        ]
-        await query.message.edit_text(
-            "Bitte wähle dein Land:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+bot.start((ctx) => showMainMenu(ctx));
 
-    # Länder → Städte
-    elif query.data.startswith("country_"):
-        land = query.data.split("_")[1]
-        if land == "de": städte = de_städte
-        elif land == "at": städte = at_städte
-        elif land == "ch": städte = ch_städte
-        else: städte = []
+// ----------------- BUTTON HANDLER -----------------
+bot.action("START_FLOW", async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.editMessageText(
+    "Bitte wähle dein Land:",
+    Markup.inlineKeyboard([
+      [Markup.button.callback("🇩🇪 Deutschland", "COUNTRY_DE")],
+      [Markup.button.callback("🇦🇹 Österreich", "COUNTRY_AT")],
+      [Markup.button.callback("🇨🇭 Schweiz", "COUNTRY_CH")]
+    ])
+  );
+});
 
-        keyboard = [[InlineKeyboardButton(stadt, callback_data=f"city_{stadt}")] for stadt in städte]
-        keyboard.append([InlineKeyboardButton("◀️ Zurück", callback_data="start_bot")])
-        await query.message.edit_text(
-            f"Bitte wähle deine Stadt in {land.upper()}:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+// Länder → Städte
+bot.action(/COUNTRY_(DE|AT|CH)/, async (ctx) => {
+  await ctx.answerCbQuery();
+  const land = ctx.match[1];
+  ctx.session = ctx.session || {};
+  ctx.session.land = land;
 
-    # Stadt → Alter eingeben
-    elif query.data.startswith("city_"):
-        stadt = query.data.split("_")[1]
-        context.user_data["stadt"] = stadt
-        context.user_data["step"] = "alter"
-        await query.message.edit_text(f"✅ Du hast {stadt} ausgewählt!\nBitte gib dein Alter ein:")
+  const buttons = STÄDTE[land].map(stadt => [Markup.button.callback(stadt, `CITY_${stadt}`)]);
+  buttons.push([Markup.button.callback("◀️ Zurück", "START_FLOW")]);
 
-    # Zahlungsart → an Admin senden
-    elif query.data.startswith("pay_"):
-        zahlungsart = query.data.split("_")[1]
-        context.user_data["zahlung"] = zahlungsart
+  await ctx.editMessageText(`Bitte wähle deine Stadt in ${land}:`, Markup.inlineKeyboard(buttons));
+});
 
-        stadt = context.user_data.get("stadt")
-        alter = context.user_data.get("alter")
-        msg = (
-            "📨 Neue Vermittlungsanfrage\n\n"
-            f"Stadt: {stadt}\n"
-            f"Alter: {alter}\n"
-            f"Zahlungsart: {zahlungsart}\n"
-            f"User: @{update.effective_user.username}"
-        )
-        await context.bot.send_message(chat_id=ADMIN_ID, text=msg)
-        await query.message.edit_text("✅ Deine Anfrage wurde an den Admin weitergeleitet.")
-        context.user_data.clear()
+// Stadt auswählen → Alter eingeben
+bot.action(/CITY_(.+)/, async (ctx) => {
+  await ctx.answerCbQuery();
+  const stadt = ctx.match[1];
+  ctx.session.stadt = stadt;
+  ctx.session.step = "ALTER";
 
-# -------- TEXT HANDLER (Alter) --------
-async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    step = context.user_data.get("step")
-    if step == "alter":
-        alter = update.message.text
-        if not alter.isdigit():
-            await update.message.reply_text("Bitte nur Zahlen eingeben.")
-            return
-        context.user_data["alter"] = alter
-        context.user_data["step"] = "zahlung"
+  await ctx.editMessageText(`✅ Du hast ${stadt} ausgewählt!\nBitte gib dein Alter ein:`);
+});
 
-        keyboard = [
-            [InlineKeyboardButton("💳 Kreditkarte", callback_data="pay_card")],
-            [InlineKeyboardButton("💸 PayPal", callback_data="pay_paypal")],
-            [InlineKeyboardButton("💰 Bar / Überweisung", callback_data="pay_cash")],
-            [InlineKeyboardButton("◀️ Zurück", callback_data="city_back")]
-        ]
-        await update.message.reply_text(
-            "Bitte wähle deine Zahlungsart:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+// Alter eingeben → Kontaktart
+bot.on("text", async (ctx) => {
+  ctx.session = ctx.session || {};
+  if (ctx.session.step === "ALTER") {
+    const alter = ctx.message.text;
+    if (!/^\d+$/.test(alter)) return ctx.reply("Bitte gib nur Zahlen ein.");
+    ctx.session.alter = alter;
+    ctx.session.step = "KONTAKTART";
 
-# -------- MAIN --------
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
-    print("Bot läuft…")
-    app.run_polling()
+    await ctx.reply(
+      "Bitte wähle deine Kontaktart:",
+      Markup.inlineKeyboard([
+        [Markup.button.callback("Telegram", "CONTACT_TELEGRAM")],
+        [Markup.button.callback("WhatsApp", "CONTACT_WHATSAPP")],
+        [Markup.button.callback("◀️ Zurück", `CITY_${ctx.session.stadt}`)]
+      ])
+    );
+  }
+});
 
-if __name__ == "__main__":
-    main()
+// Kontaktart → Nachricht an Admin
+bot.action(/CONTACT_(TELEGRAM|WHATSAPP)/, async (ctx) => {
+  await ctx.answerCbQuery();
+  ctx.session.contact = ctx.match[1];
+
+  const msg = `📨 Neue Vermittlungsanfrage
+User: @${ctx.from.username || ctx.from.first_name}
+Land: ${ctx.session.land}
+Stadt: ${ctx.session.stadt}
+Alter: ${ctx.session.alter}
+Kontaktart: ${ctx.session.contact}`;
+
+  await ctx.telegram.sendMessage(ADMIN_ID, msg);
+  await ctx.editMessageText("✅ Deine Anfrage wurde an den Admin weitergeleitet.");
+  ctx.session = {}; // reset
+});
+
+// ----------------- LAUNCH -----------------
+bot.launch({ dropPendingUpdates: true });
+console.log("🤖 Vermittlungs-Bot gestartet");
+
+process.once("SIGINT", () => bot.stop("SIGINT"));
+process.once("SIGTERM", () => bot.stop("SIGTERM"));
+
+// Fehler-Handler
+bot.catch((err, ctx) => {
+  console.error(`Fehler bei UpdateType ${ctx.updateType}:`, err);
+});
