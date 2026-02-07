@@ -1,10 +1,13 @@
 import { Telegraf, Markup } from "telegraf";
 
+// ----------------- CONFIG -----------------
 if (!process.env.BOT_TOKEN) throw new Error("BOT_TOKEN fehlt");
-if (!process.env.ADMIN_ID) throw new Error("ADMIN_ID fehlt");
+
+// Admin-ID optional setzen, sonst Warnung und Bot läuft weiter
+const ADMIN_ID = process.env.ADMIN_ID ? parseInt(process.env.ADMIN_ID) : null;
+if (!ADMIN_ID) console.warn("⚠️ WARNUNG: ADMIN_ID nicht gesetzt! Anfragen können nicht weitergeleitet werden.");
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-const ADMIN_ID = parseInt(process.env.ADMIN_ID);
 
 // ----------------- STÄDTE -----------------
 const STÄDTE = {
@@ -53,6 +56,7 @@ bot.action(/COUNTRY_(DE|AT|CH)/, async (ctx) => {
 bot.action(/CITY_(.+)/, async (ctx) => {
   await ctx.answerCbQuery();
   const stadt = ctx.match[1];
+  ctx.session = ctx.session || {};
   ctx.session.stadt = stadt;
   ctx.session.step = "ALTER";
 
@@ -84,15 +88,20 @@ bot.action(/CONTACT_(TELEGRAM|WHATSAPP)/, async (ctx) => {
   await ctx.answerCbQuery();
   ctx.session.contact = ctx.match[1];
 
-  const msg = `📨 Neue Vermittlungsanfrage
+  if (ADMIN_ID) {
+    const msg = `📨 Neue Vermittlungsanfrage
 User: @${ctx.from.username || ctx.from.first_name}
 Land: ${ctx.session.land}
 Stadt: ${ctx.session.stadt}
 Alter: ${ctx.session.alter}
 Kontaktart: ${ctx.session.contact}`;
 
-  await ctx.telegram.sendMessage(ADMIN_ID, msg);
-  await ctx.editMessageText("✅ Deine Anfrage wurde an den Admin weitergeleitet.");
+    await ctx.telegram.sendMessage(ADMIN_ID, msg);
+    await ctx.editMessageText("✅ Deine Anfrage wurde an den Admin weitergeleitet.");
+  } else {
+    await ctx.editMessageText("⚠️ Admin ist nicht gesetzt. Deine Anfrage kann nicht weitergeleitet werden.");
+  }
+
   ctx.session = {}; // reset
 });
 
