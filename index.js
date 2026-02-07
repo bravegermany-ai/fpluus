@@ -21,6 +21,13 @@ const girlData = {
   }
 };
 
+// ---------------- ZAHLUNGSLINKS ----------------
+const paymentLinks = {
+  PAYPAL: "https://www.paypal.me/FplusPaypal",
+  AMAZON: "https://www.guthaben.de/amazon-gutscheine-oesterreich",
+  BITSA: "https://www.guthaben.de/bitsa-oesterreich?gclsrc=aw.ds&gad_source=1&gad_campaignid=12449738630&gbraid=0AAAAADtO4m0pUohETYz4_wl28FEuglDwZ&gclid=Cj0KCQiA4pvMBhDYARIsAGfgwvzNiGQ8PaERzafBZJnGnkYjAWpZ9F7g49amyjgIm2wRxt_A0A9XMOoaAp7pEALw_wcB"
+};
+
 // ---------------- START ----------------
 bot.start((ctx) => {
   sessions[ctx.from.id] = {};
@@ -34,7 +41,7 @@ bot.start((ctx) => {
 
 // ---------------- FLOW ----------------
 
-// Start → Länder / Stadt (hier nur Wien)
+// Start → Stadtwahl
 bot.action("START_FLOW", async (ctx) => {
   await ctx.answerCbQuery();
   await ctx.editMessageText(
@@ -68,38 +75,25 @@ bot.action("BUY_CONTACT", async (ctx) => {
   await ctx.editMessageText(
     "Wähle deine Zahlungsmethode:",
     Markup.inlineKeyboard([
-      [Markup.button.callback("PayPal", "PAY_PAYPAL")],
-      [Markup.button.callback("Amazon", "PAY_AMAZON")],
-      [Markup.button.callback("Bitsa", "PAY_BITSA")]
+      [Markup.button.url("PayPal", paymentLinks.PAYPAL)],
+      [Markup.button.url("Amazon", paymentLinks.AMAZON)],
+      [Markup.button.url("Bitsa", paymentLinks.BITSA)]
     ])
   );
-});
 
-// Zahlungsoption → Admin kontaktieren
-["PAY_PAYPAL","PAY_AMAZON","PAY_BITSA"].forEach(method => {
-  bot.action(method, async (ctx) => {
-    await ctx.answerCbQuery();
-    const session = sessions[ctx.from.id];
-    const girl = girlData[session.city];
-    const zahlungsmethode = method.replace("PAY_","");
-
-    // Nachricht an Admin
-    if (ADMIN_ID) {
-      await ctx.telegram.sendMessage(
-        ADMIN_ID, 
-        `Neue Vermittlungsanfrage von @${ctx.from.username || ctx.from.first_name}\n`+
-        `Stadt: ${session.city}\nName: ${girl.name}\nAlter: ${girl.age}\n`+
-        `Link: ${girl.link}\nZahlungsmethode: ${zahlungsmethode}`
-      );
-    }
-
-    // Bestätigung an User
-    await ctx.editMessageText(
-      `✅ Deine Anfrage für ${girl.name} (${girl.age}) wurde registriert.\nZahlungsmethode: ${zahlungsmethode}\nKontaktiere den Admin @zemiperle`
+  // Nachricht an Admin sofort, dass jemand die Kaufoption gestartet hat
+  const session = sessions[ctx.from.id];
+  const girl = girlData[session.city];
+  if (ADMIN_ID) {
+    ctx.telegram.sendMessage(
+      ADMIN_ID,
+      `Neue Kontaktanfrage von @${ctx.from.username || ctx.from.first_name}\n` +
+      `Stadt: ${session.city}\nName: ${girl.name}\nAlter: ${girl.age}`
     );
+  }
 
-    sessions[ctx.from.id] = {}; // reset
-  });
+  // Session zurücksetzen
+  sessions[ctx.from.id] = {};
 });
 
 // ---------------- LAUNCH ----------------
