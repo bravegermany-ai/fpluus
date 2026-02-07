@@ -30,14 +30,12 @@ const STÄDTE = {
 };
 
 // ---------------- LINKS ----------------
-// Hier müssen alle deine Links rein, aktuell nur Beispiel
+// Alle Links hier einfügen (Platzhalter)
 const ALL_LINKS = [
   "https://t.me/willigedamen/4","https://t.me/willigedamen/5","https://t.me/willigedamen/6",
   "https://t.me/willigedamen/9","https://t.me/willigedamen/15","https://t.me/willigedamen/16",
   "https://t.me/willigedamen/17","https://t.me/willigedamen/18","https://t.me/willigedamen/19",
-  "https://t.me/willigedamen/20","https://t.me/willigedamen/22","https://t.me/willigedamen/25",
-  "https://t.me/willigedamen/26","https://t.me/willigedamen/28","https://t.me/willigedamen/27",
-  "https://t.me/willigedamen/24","https://t.me/willigedamen/23","https://t.me/willigedamen/21"
+  "https://t.me/willigedamen/20"
 ];
 
 // ---------------- GIRLS PER CITY ----------------
@@ -146,7 +144,10 @@ bot.action("BUY", async ctx=>{
       `✅ Deine Anfrage für ${s.currentGirl.name} (${s.currentGirl.age}) wurde registriert.\n`+
       `Zahlungsmethode: ${method}\n`+
       `Hier kannst du bezahlen: ${PAYMENT_LINKS[method]}\n`+
-      `Kontaktiere den Admin ${ADMIN_USERNAME}`
+      `Kontaktiere den Admin ${ADMIN_USERNAME}`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback("◀️ Zurück","NEXT")] // zurück zum Mädchen
+      ])
     );
 
     if(ADMIN_ID){
