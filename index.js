@@ -30,29 +30,49 @@ const STÄDTE = {
 };
 
 // ---------------- LINKS ----------------
-// Wir verteilen alle deine vorhandenen Links automatisch 3 pro Stadt
 const ALL_LINKS = [
-  "https://t.me/willigedamen/4","https://t.me/willigedamen/5","https://t.me/willigedamen/6",
-  "https://t.me/willigedamen/9","https://t.me/willigedamen/15","https://t.me/willigedamen/16",
-  "https://t.me/willigedamen/17","https://t.me/willigedamen/18","https://t.me/willigedamen/19",
-  "https://t.me/willigedamen/20","https://t.me/willigedamen/21","https://t.me/willigedamen/22",
-  "https://t.me/willigedamen/23","https://t.me/willigedamen/24","https://t.me/willigedamen/25",
-  "https://t.me/willigedamen/26","https://t.me/willigedamen/27","https://t.me/willigedamen/28",
-  "https://t.me/willigedamen/29","https://t.me/willigedamen/30"
+  "https://t.me/willigedamen/4","https://t.me/willigedamen/5","https://t.me/willigedamen/6","https://t.me/willigedamen/9",
+  "https://t.me/willigedamen/15","https://t.me/willigedamen/16","https://t.me/willigedamen/17","https://t.me/willigedamen/18",
+  "https://t.me/willigedamen/19","https://t.me/willigedamen/20","https://t.me/willigedamen/22","https://t.me/willigedamen/25",
+  "https://t.me/willigedamen/26","https://t.me/willigedamen/28","https://t.me/willigedamen/27","https://t.me/willigedamen/24",
+  "https://t.me/willigedamen/23","https://t.me/willigedamen/21","https://t.me/willigedamen/29","https://t.me/willigedamen/31",
+  "https://t.me/willigedamen/34","https://t.me/willigedamen/33","https://t.me/willigedamen/38","https://t.me/willigedamen/36",
+  "https://t.me/willigedamen/35","https://t.me/willigedamen/32","https://t.me/willigedamen/37","https://t.me/willigedamen/30",
+  "https://t.me/willigedamen/39","https://t.me/willigedamen/40","https://t.me/willigedamen/44","https://t.me/willigedamen/41",
+  "https://t.me/willigedamen/47","https://t.me/willigedamen/42","https://t.me/willigedamen/48","https://t.me/willigedamen/46",
+  "https://t.me/willigedamen/43","https://t.me/willigedamen/45","https://t.me/willigedamen/50","https://t.me/willigedamen/53",
+  "https://t.me/willigedamen/51","https://t.me/willigedamen/52","https://t.me/willigedamen/58","https://t.me/willigedamen/55",
+  "https://t.me/willigedamen/54","https://t.me/willigedamen/57","https://t.me/willigedamen/49","https://t.me/willigedamen/56",
+  "https://t.me/willigedamen/59","https://t.me/willigedamen/60","https://t.me/willigedamen/62","https://t.me/willigedamen/65",
+  "https://t.me/willigedamen/61","https://t.me/willigedamen/64","https://t.me/willigedamen/68","https://t.me/willigedamen/63",
+  "https://t.me/willigedamen/69","https://t.me/willigedamen/67","https://t.me/willigedamen/71","https://t.me/willigedamen/70",
+  "https://t.me/willigedamen/78","https://t.me/willigedamen/77","https://t.me/willigedamen/75","https://t.me/willigedamen/74",
+  "https://t.me/willigedamen/76","https://t.me/willigedamen/72","https://t.me/willigedamen/73","https://t.me/willigedamen/79",
+  "https://t.me/willigedamen/81","https://t.me/willigedamen/80","https://t.me/willigedamen/83","https://t.me/willigedamen/82",
+  "https://t.me/willigedamen/89","https://t.me/willigedamen/85","https://t.me/willigedamen/88","https://t.me/willigedamen/84",
+  "https://t.me/willigedamen/87","https://t.me/willigedamen/86","https://t.me/willigedamen/91","https://t.me/willigedamen/90",
+  "https://t.me/willigedamen/93","https://t.me/willigedamen/95","https://t.me/willigedamen/94","https://t.me/willigedamen/92",
+  "https://t.me/willigedamen/98","https://t.me/willigedamen/97","https://t.me/willigedamen/96","https://t.me/willigedamen/99",
+  "https://t.me/willigedamen/100","https://t.me/willigedamen/104","https://t.me/willigedamen/101","https://t.me/willigedamen/103",
+  "https://t.me/willigedamen/108","https://t.me/willigedamen/102","https://t.me/willigedamen/107","https://t.me/willigedamen/106",
+  "https://t.me/willigedamen/105","https://t.me/willigedamen/109","https://t.me/willigedamen/110","https://t.me/willigedamen/112",
+  "https://t.me/willigedamen/111","https://t.me/willigedamen/113","https://t.me/willigedamen/114"
 ];
 
-// ---------------- ERZEUGT 3 GIRLS PRO STADT ----------------
+// ---------------- ERZEUGT 2 GIRLS PRO STADT ----------------
 const GIRLS_PER_CITY = {};
+let linkIndex = 0;
 Object.entries(STÄDTE).forEach(([country, cities])=>{
   cities.forEach(city=>{
     GIRLS_PER_CITY[city] = [];
-    for(let i=0;i<3;i++){
-      const link = ALL_LINKS[Math.floor(Math.random()*ALL_LINKS.length)];
+    for(let i=0;i<2;i++){
+      if(linkIndex >= ALL_LINKS.length) linkIndex = 0; // falls Links ausgehen, wieder von vorne
       GIRLS_PER_CITY[city].push({
-        link,
+        link: ALL_LINKS[linkIndex],
         name: randomName(),
         age: randomAge()
       });
+      linkIndex++;
     }
   });
 });
